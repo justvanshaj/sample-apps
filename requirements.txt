@@ -4,3 +4,4 @@ pillow
 pytesseract
 opencv-python
 numpy
+opencv-python-headless
