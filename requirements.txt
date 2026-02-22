@@ -1,4 +1,6 @@
 streamlit
 python-docx
-docxcompose
-lxml
+pillow
+pytesseract
+opencv-python
+numpy
