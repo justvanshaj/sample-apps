@@ -8,17 +8,15 @@ from docx2pdf import convert
 
 st.set_page_config(page_title="COA Generator Pro+", layout="wide")
 
-# ---------------------------
-# FILES
-# ---------------------------
 HISTORY_FILE = "coa_history.csv"
 
 # ---------------------------
-# DOCX REPLACE
+# SAFE TEXT REPLACEMENT (FIXED)
 # ---------------------------
 def replace_text(doc, replacements):
     for para in doc.paragraphs:
         for key, val in replacements.items():
+            val = str(val)  # ✅ FIX
             if f"{{{{{key}}}}}" in para.text:
                 para.text = para.text.replace(f"{{{{{key}}}}}", val)
 
@@ -26,6 +24,7 @@ def replace_text(doc, replacements):
         for row in table.rows:
             for cell in row.cells:
                 for key, val in replacements.items():
+                    val = str(val)  # ✅ FIX
                     if f"{{{{{key}}}}}" in cell.text:
                         cell.text = cell.text.replace(f"{{{{{key}}}}}", val)
 
@@ -48,7 +47,7 @@ def calculate_best_before(date_str):
         return ""
 
 # ---------------------------
-# CALCULATION
+# VALUE GENERATION
 # ---------------------------
 def generate_values(moisture):
     protein = round(random.uniform(2.45, 2.52), 2)
@@ -59,7 +58,7 @@ def generate_values(moisture):
     return gum, protein, ash, air, fat
 
 # ---------------------------
-# SAVE HISTORY
+# HISTORY SAVE
 # ---------------------------
 def save_history(data):
     df = pd.DataFrame([data])
@@ -80,12 +79,12 @@ def load_history():
 # UI HEADER
 # ---------------------------
 st.title("🏭 COA Generator Pro+")
-st.caption("Industrial COA System with History & Preview")
+st.caption("Industrial COA System with History & Export")
 
 tab1, tab2 = st.tabs(["🧾 Generate COA", "📊 History"])
 
 # =========================================================
-# TAB 1 - GENERATE
+# TAB 1
 # =========================================================
 with tab1:
 
@@ -121,6 +120,9 @@ with tab1:
     with c8:
         vis24 = st.number_input("Viscosity 24H", 5200, 6000, 5400)
 
+    # ---------------------------
+    # AUTO VALUES
+    # ---------------------------
     best_before = calculate_best_before(date)
     gum, protein, ash, air, fat = generate_values(moisture)
 
@@ -133,8 +135,11 @@ with tab1:
     m4.metric("Air", air)
     m5.metric("Fat", fat)
 
-    st.info(f"Best Before: {best_before}")
+    st.info(f"📅 Best Before: {best_before}")
 
+    # ---------------------------
+    # GENERATE
+    # ---------------------------
     if st.button("🚀 Generate COA"):
 
         data = {
@@ -162,7 +167,7 @@ with tab1:
             replace_text(doc, data)
             doc.save(output)
 
-            # Save history
+            # SAVE HISTORY
             save_history({
                 "batch": batch,
                 "date": date,
@@ -171,24 +176,28 @@ with tab1:
                 "moisture": moisture
             })
 
-            st.success("✅ COA Generated")
+            st.success("✅ COA Generated Successfully")
 
+            # DOWNLOAD DOCX
             with open(output, "rb") as f:
                 st.download_button("📥 Download DOCX", f.read(), file_name=output)
 
-            # PDF
-            convert(output)
-            pdf_file = output.replace(".docx", ".pdf")
+            # PDF EXPORT (safe)
+            try:
+                convert(output)
+                pdf_file = output.replace(".docx", ".pdf")
 
-            if os.path.exists(pdf_file):
-                with open(pdf_file, "rb") as f:
-                    st.download_button("📄 Download PDF", f.read(), file_name=pdf_file)
+                if os.path.exists(pdf_file):
+                    with open(pdf_file, "rb") as f:
+                        st.download_button("📄 Download PDF", f.read(), file_name=pdf_file)
+            except:
+                st.warning("PDF conversion not supported on this system")
 
         else:
-            st.error("Template not found")
+            st.error("❌ Template not found")
 
 # =========================================================
-# TAB 2 - HISTORY
+# TAB 2 HISTORY
 # =========================================================
 with tab2:
 
