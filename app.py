@@ -11,26 +11,29 @@ st.set_page_config(page_title="COA Generator Pro+", layout="wide")
 HISTORY_FILE = "coa_history.csv"
 OUTPUT_DIR = "temp"
 
-# ✅ Ensure temp folder exists
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ---------------------------
-# SAFE TEXT REPLACEMENT
+# SAFE RUN-BASED REPLACEMENT (FINAL FIX)
 # ---------------------------
 def replace_text(doc, replacements):
+
+    def replace_in_paragraph(paragraph):
+        for key, value in replacements.items():
+            placeholder = f"{{{{{key}}}}}"
+            if placeholder in paragraph.text:
+                for run in paragraph.runs:
+                    if placeholder in run.text:
+                        run.text = run.text.replace(placeholder, str(value))
+
     for para in doc.paragraphs:
-        for key, val in replacements.items():
-            val = str(val)
-            if f"{{{{{key}}}}}" in para.text:
-                para.text = para.text.replace(f"{{{{{key}}}}}", val)
+        replace_in_paragraph(para)
 
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
-                for key, val in replacements.items():
-                    val = str(val)
-                    if f"{{{{{key}}}}}" in cell.text:
-                        cell.text = cell.text.replace(f"{{{{{key}}}}}", val)
+                for para in cell.paragraphs:
+                    replace_in_paragraph(para)
 
 # ---------------------------
 # BEST BEFORE
@@ -84,9 +87,9 @@ st.caption("Industrial COA System with History & Export")
 
 tab1, tab2 = st.tabs(["🧾 Generate COA", "📊 History"])
 
-# =========================================================
+# ===========================
 # TAB 1
-# =========================================================
+# ===========================
 with tab1:
 
     st.subheader("📦 Batch Info")
@@ -137,9 +140,7 @@ with tab1:
 
     if st.button("🚀 Generate COA"):
 
-        # ✅ SAFE FILENAME
         safe_batch = (batch or "BATCH").replace("/", "-").replace("\\", "-")
-
         output = os.path.join(OUTPUT_DIR, f"COA_{safe_batch}.docx")
 
         data = {
@@ -179,10 +180,10 @@ with tab1:
             with open(output, "rb") as f:
                 st.download_button("📥 Download DOCX", f.read(), file_name=os.path.basename(output))
 
-            # PDF safe fallback
             try:
                 convert(output)
                 pdf_file = output.replace(".docx", ".pdf")
+
                 if os.path.exists(pdf_file):
                     with open(pdf_file, "rb") as f:
                         st.download_button("📄 Download PDF", f.read(), file_name=os.path.basename(pdf_file))
@@ -192,9 +193,9 @@ with tab1:
         else:
             st.error("❌ Template not found")
 
-# =========================================================
+# ===========================
 # TAB 2
-# =========================================================
+# ===========================
 with tab2:
 
     st.subheader("📊 COA History")
